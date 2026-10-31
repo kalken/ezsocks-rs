@@ -1,10 +1,12 @@
 # ezsocks-rs
 
-A small SOCKS5 proxy for running inside a network namespace, so that
-browsers and other programs on your network can send their traffic
-through that namespace's VPN instead of your own connection. Host names
-are resolved inside the namespace too, so DNS goes through the VPN as
-well.
+A small SOCKS5 proxy with Happy Eyeballs. Browsers and other programs
+connect to it, and it makes their connections and DNS lookups for them,
+from wherever it runs.
+
+Run it inside a network namespace with its own VPN, and programs on your
+network can send their traffic, DNS included, through that VPN instead
+of your own connection.
 
 It is written for low-powered home routers: a single binary of under
 1 MB, about 2 MB of memory per instance, and on Linux the data is passed
@@ -19,7 +21,7 @@ with `splice()` so it never gets copied through the process.
   IPv6 and IPv4 addresses are looked up in parallel, and connection
   attempts are raced 250 ms apart, preferring IPv6. A broken IPv6 route
   costs a short delay instead of a long timeout. `--family ipv4` skips
-  IPv6 completely, for namespaces without it.
+  IPv6 completely, for networks without it.
 - **DNS cache:** lookups are cached for 60 seconds, and concurrent
   lookups of the same name share one query. Failed lookups are not
   cached.
@@ -33,20 +35,19 @@ with `splice()` so it never gets copied through the process.
 
 ```sh
 cargo build --release
-./target/release/ezsocks --listen 0.0.0.0:1080 --family ipv4
+./target/release/ezsocks --listen 0.0.0.0:1080
 curl --socks5-hostname 127.0.0.1:1080 https://example.com
 ```
 
-In browsers, turn on remote DNS ("Proxy DNS when using SOCKS v5" in
-Firefox, `socks5h://` elsewhere), otherwise names get looked up outside
-the namespace.
+In Firefox, check "Proxy DNS when using SOCKS v5", so that DNS lookups
+go through the proxy too. Other browsers do that by themselves.
 
 To run it inside a network namespace, start it with `ip netns exec`, and
 listen on an address that the rest of your network can reach, for
 example the namespace's end of a veth pair:
 
 ```sh
-ip netns exec vpn ezsocks --listen 10.200.1.2:1080 --family ipv4
+ip netns exec vpn ezsocks --listen 10.200.1.2:1080
 ```
 
 ## Options
